@@ -2,26 +2,26 @@
 <html lang="mk">
 <head>
   <meta charset="UTF-8">
-  <title>First Aid Exam Prep</title>
+  <title>Тест за Прва Помош</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 30px; line-height: 1.6; }
-    #welcome, #quizContainer, #results, #review { max-width: 800px; margin: auto; }
-    #startBtn, #confirm, #next, #submitFinal {
+    #welcome, #quizContainer, #results { max-width: 800px; margin: auto; }
+    h1, h2, h3 { color: #0078D4; }
+    button {
       margin-top: 20px;
-      padding: 10px 20px;
+      padding: 12px 24px;
       font-size: 18px;
       background-color: #0078D4;
       color: white;
       border: none;
-      border-radius: 5px;
+      border-radius: 8px;
       cursor: pointer;
     }
-    .question { margin-bottom: 20px; }
+    .question { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 6px; }
     .choices label { display: block; margin: 5px 0; }
-    .locked { color: gray; }
-    .correct { color: green; }
-    .incorrect { color: red; }
-    #timer, #progress { font-weight: bold; margin: 20px 0; }
+    .correct { color: green; font-weight: bold; }
+    .incorrect { color: red; font-weight: bold; }
+    #timer { font-weight: bold; margin: 20px 0; }
   </style>
 </head>
 <body>
@@ -29,14 +29,19 @@
   <!-- Welcome Page -->
   <div id="welcome">
     <h1>Добредојдовте на тестот за Прва Помош</h1>
-    <p>Овој сертификат е задолжителен за добивање возачка дозвола во Северна Македонија и Ви овозможува да бидете подготвени за итни ситуации на патот. Тестот е базиран на официјалната банка на прашања на Црвениот Крст на Северна Македонија, осигурувајќи усогласеност со националните стандарди.</p>
-    <p>Секое прашање е можност да учите, вежбате и да станете покомпетентни – останете фокусирани и верувајте во себе!</p>
+    <p>
+      Овој сертификат е задолжителен за добивање возачка дозвола во Северна Македонија и Ви овозможува да бидете подготвени за итни ситуации на патот. 
+      Тестот е базиран на официјалната банка на прашања на Црвениот Крст на Северна Македонија, осигурувајќи усогласеност со националните стандарди.
+    </p>
+    <p>
+      Секое прашање е можност да учите, вежбате и да станете покомпетентни – останете фокусирани и верувајте во себе!
+    </p>
     <h3>Инструкции за тестот:</h3>
     <ul>
       <li>Потребно е 80% за полагање (12 од 15 прашања).</li>
       <li>Времетраење: 60 минути од моментот кога ќе започнете.</li>
       <li>Прогрес-бар покажува колку прашања сте одговориле.</li>
-      <li>Кога ќе завршите, кликнете Submit за да се пресмета тестот.</li>
+      <li>Кога ќе завршите, кликнете <b>Submit</b> за да се пресмета тестот.</li>
       <li>Резултатот се прикажува веднаш како Pass/Fail со број на точни одговори (на пример, 14 од 15).</li>
     </ul>
     <p><strong>Совет:</strong> Одвојте внимание, останете смирени и верувајте во вашето знаење – секое прашање е шанса да научите и да се подготвите!</p>
@@ -46,140 +51,90 @@
   <!-- Quiz Section -->
   <div id="quizContainer" style="display:none;">
     <div id="timer">Преостанато време: 60:00</div>
-    <div id="progress">Одговорени прашања: 0 / 0</div>
-    <div id="quiz"></div>
-    <div id="navigation">
-      <button id="confirm">Потврди одговор</button>
-      <button id="next" style="display:none;">Следно прашање</button>
-    </div>
+    <form id="quizForm"></form>
+    <button type="button" id="submitBtn">Поднеси одговори</button>
   </div>
 
-  <!-- Results and Review -->
+  <!-- Results -->
   <div id="results"></div>
-  <div id="review"></div>
 
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      let questions = [];
-      let currentIndex = 0;
-      let answers = {};
-      let locked = {};
-      let timer;
+    let questions = [];
+    let timerInterval;
 
-      document.getElementById("startBtn").onclick = () => {
-        document.getElementById("welcome").style.display = "none";
-        document.getElementById("quizContainer").style.display = "block";
-        loadQuiz();
-      };
+    document.getElementById("startBtn").onclick = () => {
+      document.getElementById("welcome").style.display = "none";
+      document.getElementById("quizContainer").style.display = "block";
+      loadQuiz();
+    };
 
-      async function loadQuiz() {
-        const res = await fetch("first_aid_questions.json");
-        questions = await res.json();
-        questions = shuffle(questions);
-        document.getElementById("progress").textContent = `Одговорени прашања: 0 / ${questions.length}`;
-        startTimer(60 * 60);
-        renderQuestion(currentIndex);
-      }
+    async function loadQuiz() {
+      const res = await fetch("first_aid_questions.json");
+      questions = await res.json();
 
-      function shuffle(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
-      }
+      // Pick first 15 for now (or randomize if needed)
+      questions = shuffle(questions).slice(0, 15);
 
-      function renderQuestion(index) {
-        const q = questions[index];
-        const quizDiv = document.getElementById("quiz");
-        const shuffledChoices = shuffle([...q.choices]);
+      renderQuestions();
+      startTimer(60 * 60);
+    }
 
-        quizDiv.innerHTML = `
-          <div class="question">
-            <p><b>Прашање ${index + 1}:</b> ${q.question}</p>
-            <div class="choices">
-              ${shuffledChoices.map(c => `
-                <label class="${locked[index] ? 'locked' : ''}">
-                  <input type="radio" name="q${index}" value="${c}" ${locked[index] ? 'disabled' : ''}> ${c}
-                </label>
-              `).join("")}
-            </div>
+    function renderQuestions() {
+      const quizForm = document.getElementById("quizForm");
+      quizForm.innerHTML = questions.map((q, i) => `
+        <div class="question">
+          <p><b>Прашање ${i + 1}:</b> ${q.question}</p>
+          <div class="choices">
+            ${q.choices.map(c => `
+              <label>
+                <input type="radio" name="q${i}" value="${c}"> ${c}
+              </label>
+            `).join("")}
           </div>
-        `;
+        </div>
+      `).join("");
+    }
 
-        document.getElementById("confirm").style.display = locked[index] ? "none" : "inline";
-        document.getElementById("next").style.display = locked[index] ? "inline" : "none";
-      }
-
-      document.getElementById("confirm").onclick = () => {
-        const selected = document.querySelector(`input[name="q${currentIndex}"]:checked`);
-        if (!selected) return alert("Изберете одговор пред да потврдите.");
-        answers[currentIndex] = selected.value;
-        locked[currentIndex] = true;
-        updateProgress();
-        renderQuestion(currentIndex);
-      };
-
-      document.getElementById("next").onclick = () => {
-        const nextUnanswered = questions.findIndex((_, i) => !locked[i]);
-        if (nextUnanswered !== -1) {
-          currentIndex = nextUnanswered;
-          renderQuestion(currentIndex);
-        } else {
-          confirmSubmission();
+    function startTimer(seconds) {
+      const timerDiv = document.getElementById("timer");
+      let remaining = seconds;
+      timerInterval = setInterval(() => {
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        timerDiv.textContent = `Преостанато време: ${mins}:${secs < 10 ? "0" : ""}${secs}`;
+        if (--remaining < 0) {
+          clearInterval(timerInterval);
+          gradeQuiz();
         }
-      };
+      }, 1000);
+    }
 
-      function updateProgress() {
-        const count = Object.keys(answers).length;
-        document.getElementById("progress").textContent = `Одговорени прашања: ${count} / ${questions.length}`;
-      }
+    function gradeQuiz() {
+      clearInterval(timerInterval);
+      const formData = new FormData(document.getElementById("quizForm"));
+      let score = 0;
 
-      function confirmSubmission() {
-        if (Object.keys(answers).length < questions.length) {
-          alert("Имате неодговорени прашања. Ќе се вратите на првото неодговорено.");
-          currentIndex = questions.findIndex((_, i) => !locked[i]);
-          renderQuestion(currentIndex);
-          return;
+      questions.forEach((q, i) => {
+        const userAnswer = formData.get("q" + i);
+        if (userAnswer === q.answer) {
+          score++;
         }
+      });
 
-        const score = questions.reduce((acc, q, i) => {
-          return answers[i] === q.answer ? acc + 1 : acc;
-        }, 0);
+      const passingScore = 12;
+      const resultsDiv = document.getElementById("results");
+      resultsDiv.innerHTML = `
+        <h2>Резултати</h2>
+        <p><strong>Вашиот резултат: ${score} / ${questions.length}</strong></p>
+        ${score >= passingScore
+          ? `<p class="correct">✅ Честитки! Положивте.</p>`
+          : `<p class="incorrect">❌ Не положивте. Прегледајте го материјалот и обидете се повторно.</p>`}
+      `;
+      document.getElementById("quizContainer").style.display = "none";
+    }
 
-        const passingScore = Math.ceil(questions.length * 0.8);
-        const resultsDiv = document.getElementById("results");
-        resultsDiv.innerHTML = `
-          <p><strong>Вашиот резултат: ${score} / ${questions.length}</strong></p>
-          ${score >= passingScore
-            ? `<p class="correct">✅ Честитки! Положивте.</p>`
-            : `<p class="incorrect">❌ Не положивте. Прегледајте ги прашањата и обидете се повторно.</p>`}
-          <button id="submitFinal">Прегледај ги прашањата</button>
-        `;
+    document.getElementById("submitBtn").onclick = gradeQuiz;
 
-        document.getElementById("quizContainer").style.display = "none";
-        document.getElementById("submitFinal").onclick = showReview;
-      }
-
-      function showReview() {
-        const reviewDiv = document.getElementById("review");
-        reviewDiv.innerHTML = questions.map((q, i) => {
-          const userAnswer = answers[i];
-          const isCorrect = userAnswer === q.answer;
-          return `
-            <div class="${isCorrect ? 'correct' : 'incorrect'}">
-              <p><b>Прашање ${i + 1}:</b> ${q.question}</p>
-              <p>Ваш одговор: ${userAnswer || "Неодговорено"}</p>
-              ${!isCorrect ? `<p>Точен одговор: <b>${q.answer}</b></p>` : ""}
-            </div>
-          `;
-        }).join("");
-      }
-
-      function startTimer(seconds) {
-        const timerDiv = document.getElementById("timer");
-        let remaining = seconds;
-        timer = setInterval(() => {
-          const mins = Math.floor(remaining / 60);
-          const secs = remaining % 60;
-          timer
+    // Shuffle helper
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i-
