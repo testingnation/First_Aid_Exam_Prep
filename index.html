@@ -43,24 +43,23 @@
   <div id="results-screen" class="hidden">
     <h2>Резултати</h2>
     <p id="score"></p>
-    <button onclick="location.reload()">Започни повторно</button>
   </div>
 
   <!-- Review Screen -->
-<div id="review-screen" class="hidden">
-  <h2>Преглед на неточни одговори</h2>
-  <div id="review-content"></div>
-  <button onclick="location.reload()">Започни повторно</button>
-</div>
+  <div id="review-screen" class="hidden">
+    <h2>Преглед на неточни одговори</h2>
+    <div id="review-content"></div>
+    <button onclick="location.reload()">Започни повторно</button>
+  </div>
 
 <script>
 let questions = [];
 let selectedQuestions = [];
 let currentQuestionIndex = 0;
 let score = 0;
+let userAnswers = [];
 let timerInterval;
 
-// Group ratios
 const groupRatios = {
   "FAB": 2, "S&A": 1, "A&P": 1, "AB&": 2,
   "B&S": 4, "C&R": 2, "I&S": 1, "C&A": 0,
@@ -91,7 +90,7 @@ async function startTest() {
 
     selectedQuestions = selectedQuestions.sort(() => 0.5 - Math.random());
     document.getElementById("progress").textContent = `Одговорени прашања: 0 / ${selectedQuestions.length}`;
-    startTimer(60 * 60); // 60 minutes
+    startTimer(60 * 60);
     showQuestion();
   } catch (error) {
     alert("Грешка при вчитување на прашањата.");
@@ -126,8 +125,9 @@ function confirmAnswer() {
   }
 
   const userAnswer = selected.value;
-  const correctAnswer = selectedQuestions[currentQuestionIndex].answer;
+  userAnswers.push(userAnswer);
 
+  const correctAnswer = selectedQuestions[currentQuestionIndex].answer;
   if (userAnswer === correctAnswer) score++;
 
   currentQuestionIndex++;
@@ -136,45 +136,7 @@ function confirmAnswer() {
   if (currentQuestionIndex < selectedQuestions.length) {
     showQuestion();
   } else {
-    function finishTest() {
-  clearInterval(timerInterval);
-  document.getElementById("test-screen").classList.add("hidden");
-  document.getElementById("results-screen").classList.remove("hidden");
-
-  const passScore = Math.ceil(selectedQuestions.length * 0.8);
-  const resultText = score >= passScore
-    ? `✅ Честитки! Положивте со ${score} од ${selectedQuestions.length} точни одговори.`
-    : `❌ Не положивте. Вашиот резултат е ${score} од ${selectedQuestions.length}. Обидете се повторно.`;
-
-  document.getElementById("score").innerHTML = resultText;
-
-  // Show review screen
-  const reviewDiv = document.getElementById("review-content");
-  const incorrect = selectedQuestions
-    .map((q, i) => {
-      const selected = document.querySelector(`input[name="choice"]:checked`);
-      const userAnswer = selected ? selected.value : "Неодговорено";
-      return {
-        index: i + 1,
-        question: q.question,
-        correct: q.answer,
-        user: userAnswer,
-        isCorrect: userAnswer === q.answer
-      };
-    });
-
-  const incorrectOnly = incorrect.filter(q => !q.isCorrect);
-
-  if (incorrectOnly.length > 0) {
-    document.getElementById("review-screen").classList.remove("hidden");
-    reviewDiv.innerHTML = incorrectOnly.map(q => `
-      <div class="incorrect">
-        <p><b>Прашање ${q.index}:</b> ${q.question}</p>
-        <p>Ваш одговор: <span style="color:red;">${q.user}</span></p>
-        <p>Точен одговор: <span style="color:green;"><b>${q.correct}</b></span></p>
-        <hr>
-      </div>
-    `).join("");
+    finishTest();
   }
 }
 
@@ -188,7 +150,30 @@ function finishTest() {
     ? `✅ Честитки! Положивте со ${score} од ${selectedQuestions.length} точни одговори.`
     : `❌ Не положивте. Вашиот резултат е ${score} од ${selectedQuestions.length}. Обидете се повторно.`;
 
-  document.getElementById("score").textContent = resultText;
+  document.getElementById("score").innerHTML = resultText;
+
+  const reviewDiv = document.getElementById("review-content");
+  const incorrectOnly = selectedQuestions.map((q, i) => {
+    return {
+      index: i + 1,
+      question: q.question,
+      correct: q.answer,
+      user: userAnswers[i],
+      isCorrect: userAnswers[i] === q.answer
+    };
+  }).filter(q => !q.isCorrect);
+
+  if (incorrectOnly.length > 0) {
+    document.getElementById("review-screen").classList.remove("hidden");
+    reviewDiv.innerHTML = incorrectOnly.map(q => `
+      <div class="incorrect">
+        <p><b>Прашање ${q.index}:</b> ${q.question}</p>
+        <p>Ваш одговор: <span style="color:red;">${q.user || "Неодговорено"}</span></p>
+        <p>Точен одговор: <span style="color:green;"><b>${q.correct}</b></span></p>
+        <hr>
+      </div>
+    `).join("");
+  }
 }
 
 function startTimer(duration) {
