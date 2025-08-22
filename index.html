@@ -44,11 +44,16 @@
 <!-- Welcome Screen -->
 <div id="welcome-screen" style="max-width: 700px; margin: 50px auto; padding: 30px; border: 2px solid #333; border-radius: 10px; background: #f1f1f1;">
   <h1 style="text-align: center; margin-bottom: 20px;">Добредојдовте во Првa Помош Тест</h1>
+
+  <!-- Browser back warning -->
   <p style="color: red; font-weight: bold; text-align: center; margin-bottom: 20px;">
     ВНИМАНИЕ: Не користете го копчето „Назад“ на вашиот прелистувач за време на тестот!
   </p>
+  
   <p>Овој сертификат е задолжителен за добивање возачка дозвола во Северна Македонија и Ви овозможува да бидете подготвени за итни ситуации на патот. Тестот е базиран на официјалната банка на прашања на Црвениот Крст на Северна Македонија, осигурувајќи усогласеност со националните стандарди.</p>
+  
   <p>Секое прашање е можност да учите, вежбате и да станете покомпетентни – останете фокусирани и верувајте во себе!</p>
+  
   <h3>Инструкции за тестот:</h3>
   <ol style="margin-left: 20px;">
     <li>Откако ќе кликнете <strong>Започни го тестот</strong>, ќе имате 60 минути за да одговорите на сите 15 прашања.</li>
@@ -57,33 +62,36 @@
     <li>Потребно е да одговорите точно на најмалку 12 од 15 прашања (80%) за да положите.</li>
     <li>Кога ќе завршите, резултатот ќе се пресмета автоматски и ќе се прикаже како Положивте / Не положивте.</li>
   </ol>
+  
   <p style="text-align: center; margin-top: 30px; font-weight: bold;">
     Одвојте внимание, останете смирени и верувајте во вашето знаење – секое прашање е шанса да научите и да се подготвите!
   </p>
+  
   <div style="text-align: center; margin-top: 20px;">
     <button onclick="startTest()" style="padding: 12px 30px; font-size: 18px; font-weight: bold;">Започни го тестот</button>
   </div>
 </div>
 
 <!-- Test Screen -->
-<div id="test-screen" class="hidden" style="max-width: 700px; margin: 50px auto;">
+<div id="test-screen" class="hidden">
   <div id="timer"></div>
   <div id="progress-container"></div>
   <div id="question-container"></div>
   <div style="margin-top: 20px;">
     <button onclick="confirmAnswer()">✅ Потврди го одговорот</button>
     <button onclick="skipQuestion()">➡️ Прескокни за сега</button>
+    <button onclick="exitTest()" style="background:red; color:white;">🟥 Прекинете го тестот</button>
   </div>
 </div>
 
 <!-- Results Screen -->
-<div id="results-screen" class="hidden" style="max-width: 700px; margin: 50px auto;">
+<div id="results-screen" class="hidden">
   <h2>Резултати</h2>
   <p id="score"></p>
 </div>
 
 <!-- Review Screen -->
-<div id="review-screen" class="hidden" style="max-width: 700px; margin: 50px auto;">
+<div id="review-screen" class="hidden">
   <h2>Преглед на неточни одговори</h2>
   <div id="review-content"></div>
   <button onclick="window.print()">🖨️ Печати преглед</button>
@@ -129,6 +137,7 @@ async function startTest() {
 
     selectedQuestions = selectedQuestions.sort(() => 0.5 - Math.random());
 
+    // Build progress tracker
     const progressContainer = document.getElementById("progress-container");
     progressContainer.innerHTML = "";
     for (let i = 0; i < selectedQuestions.length; i++) {
@@ -138,6 +147,7 @@ async function startTest() {
       progressContainer.appendChild(box);
     }
 
+    // Initialize unanswered indices and answers
     unansweredIndices = selectedQuestions.map((_, i) => i);
     userAnswers = new Array(selectedQuestions.length);
 
@@ -169,7 +179,10 @@ function showQuestion(index) {
 
 function confirmAnswer() {
   const selected = document.querySelector('input[name="choice"]:checked');
-  if (!selected) { alert("Ве молиме изберете одговор."); return; }
+  if (!selected) {
+    alert("Ве молиме изберете одговор.");
+    return;
+  }
 
   userAnswers[currentQuestionIndex] = selected.value;
   if (selected.value === selectedQuestions[currentQuestionIndex].answer) score++;
@@ -177,24 +190,39 @@ function confirmAnswer() {
   document.querySelectorAll(".progress-box")[currentQuestionIndex].classList.add("answered");
 
   unansweredIndices = unansweredIndices.filter(i => i !== currentQuestionIndex);
-
   goToNextQuestion();
 }
 
-function skipQuestion() { goToNextQuestion(true); }
+function skipQuestion() {
+  goToNextQuestion(true);
+}
 
-function goToNextQuestion(skipped=false) {
-  if (unansweredIndices.length === 0) { finishTest(); return; }
+function exitTest() {
+  const confirmExit = confirm("Дали сте сигурни дека сакате да го прекинете тестот? Вашиот напредок ќе се зачува.");
+  if (confirmExit) {
+    document.getElementById("test-screen").classList.add("hidden");
+    document.getElementById("welcome-screen").classList.remove("hidden");
+  }
+}
+
+function goToNextQuestion(skipped = false) {
+  if (unansweredIndices.length === 0) {
+    finishTest();
+    return;
+  }
 
   let nextIndex;
   if (skipped) {
     const currentPos = unansweredIndices.indexOf(currentQuestionIndex);
-    nextIndex = (currentPos === -1 || currentPos === unansweredIndices.length - 1) 
-      ? unansweredIndices[0] 
-      : unansweredIndices[currentPos + 1];
+    if (currentPos === -1 || currentPos === unansweredIndices.length - 1) {
+      nextIndex = unansweredIndices[0];
+    } else {
+      nextIndex = unansweredIndices[currentPos + 1];
+    }
   } else {
     nextIndex = unansweredIndices[0];
   }
+
   showQuestion(nextIndex);
 }
 
@@ -211,20 +239,20 @@ function finishTest() {
   document.getElementById("score").innerHTML = resultText;
 
   const reviewDiv = document.getElementById("review-content");
-  const incorrectOnly = selectedQuestions.map((q,i)=>({
-    index:i+1,
-    question:q.question,
-    correct:q.answer,
-    user:userAnswers[i],
-    isCorrect:userAnswers[i]===q.answer
-  })).filter(q=>!q.isCorrect);
+  const incorrectOnly = selectedQuestions.map((q, i) => ({
+    index: i + 1,
+    question: q.question,
+    correct: q.answer,
+    user: userAnswers[i],
+    isCorrect: userAnswers[i] === q.answer
+  })).filter(q => !q.isCorrect);
 
-  if(incorrectOnly.length>0){
+  if (incorrectOnly.length > 0) {
     document.getElementById("review-screen").classList.remove("hidden");
-    reviewDiv.innerHTML = incorrectOnly.map(q=>`
+    reviewDiv.innerHTML = incorrectOnly.map(q => `
       <div class="incorrect">
         <p><b>Прашање ${q.index}:</b> ${q.question}</p>
-        <p>Ваш одговор: <span style="color:red;">${q.user||"Неодговорено"}</span></p>
+        <p>Ваш одговор: <span style="color:red;">${q.user || "Неодговорено"}</span></p>
         <p>Точен одговор: <span style="color:green;"><b>${q.correct}</b></span></p>
         <hr>
       </div>
@@ -237,11 +265,14 @@ function startTimer(duration) {
   const timerDisplay = document.getElementById("timer");
 
   timerInterval = setInterval(() => {
-    const minutes = Math.floor(time/60);
+    const minutes = Math.floor(time / 60);
     const seconds = time % 60;
-    timerDisplay.textContent = `Преостанато време: ${minutes}:${seconds<10?"0":""}${seconds}`;
-    if(--time<0){ clearInterval(timerInterval); finishTest(); }
-  },1000);
+    timerDisplay.textContent = `Преостанато време: ${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+    if (--time < 0) {
+      clearInterval(timerInterval);
+      finishTest();
+    }
+  }, 1000);
 }
 </script>
 
