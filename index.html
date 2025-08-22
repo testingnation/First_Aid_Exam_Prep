@@ -10,10 +10,13 @@
     .result { font-weight: bold; margin-top: 20px; }
     .correct { color: green; }
     .incorrect { color: red; }
+    #progress, #timer { margin: 20px 0; font-weight: bold; }
   </style>
 </head>
 <body>
   <h1>First Aid Exam Practice</h1>
+  <div id="timer">Time Remaining: 60:00</div>
+  <div id="progress">You have answered 0 of 0 questions</div>
   <div id="quiz"></div>
   <button id="submit">Submit Test</button>
   <div id="results"></div>
@@ -51,44 +54,85 @@
       }
 
       selected = shuffle(selected);
+      const totalQuestions = selected.length;
+      let answeredCount = 0;
+
       const quizDiv = document.getElementById("quiz");
-      quizDiv.innerHTML = selected.map((q, i) => `
-        <div class="question">
-          <p><b>Q${i + 1}:</b> ${q.question}</p>
-          <div class="choices">
-            ${q.choices.map(c => `
-              <label>
-                <input type="radio" name="q${i}" value="${c}"> ${c}
-              </label>
-            `).join("")}
+      const progressDiv = document.getElementById("progress");
+
+      quizDiv.innerHTML = selected.map((q, i) => {
+        const shuffledChoices = shuffle([...q.choices]);
+        return `
+          <div class="question">
+            <p><b>Q${i + 1}:</b> ${q.question}</p>
+            <div class="choices">
+              ${shuffledChoices.map(c => `
+                <label>
+                  <input type="radio" name="q${i}" value="${c}" onchange="updateProgress()"> ${c}
+                </label>
+              `).join("")}
+            </div>
           </div>
-        </div>
-      `).join("");
-
-      document.getElementById("submit").onclick = () => {
-        let score = 0;
-        const resultsDiv = document.getElementById("results");
-        resultsDiv.innerHTML = "";
-
-        selected.forEach((q, i) => {
-          const chosen = document.querySelector(`input[name="q${i}"]:checked`);
-          if (chosen && chosen.value === q.answer) {
-            score++;
-          } else {
-            resultsDiv.innerHTML += `<p class="incorrect">❌ Q${i + 1} Wrong. Correct answer: <b>${q.answer}</b></p>`;
-          }
-        });
-
-        const total = selected.length;
-        const passingScore = Math.ceil(total * 0.8);
-
-        resultsDiv.innerHTML = `
-          <p class="result">Your score: ${score} / ${total}</p>
-          ${score >= passingScore
-            ? `<p class="correct">✅ Congratulations! You passed.</p>`
-            : `<p class="incorrect">❌ You did not pass. Please review the material and try again.</p>`}
         `;
+      }).join("");
+
+      progressDiv.textContent = `You have answered 0 of ${totalQuestions} questions`;
+
+      window.updateProgress = function () {
+        answeredCount = 0;
+        for (let i = 0; i < totalQuestions; i++) {
+          const chosen = document.querySelector(`input[name="q${i}"]:checked`);
+          if (chosen) answeredCount++;
+        }
+        progressDiv.textContent = `You have answered ${answeredCount} of ${totalQuestions} questions`;
       };
+
+      document.getElementById("submit").onclick = () => finishQuiz(selected);
+      startTimer(60 * 60); // 60 minutes
+    }
+
+    function finishQuiz(selected) {
+      let score = 0;
+      const resultsDiv = document.getElementById("results");
+      resultsDiv.innerHTML = "";
+
+      selected.forEach((q, i) => {
+        const chosen = document.querySelector(`input[name="q${i}"]:checked`);
+        if (chosen && chosen.value === q.answer) {
+          score++;
+        } else {
+          resultsDiv.innerHTML += `<p class="incorrect">❌ Q${i + 1} Wrong. Correct answer: <b>${q.answer}</b></p>`;
+        }
+      });
+
+      const total = selected.length;
+      const passingScore = Math.ceil(total * 0.8);
+
+      resultsDiv.innerHTML = `
+        <p class="result">Your score: ${score} / ${total}</p>
+        ${score >= passingScore
+          ? `<p class="correct">✅ Congratulations! You passed.</p>`
+          : `<p class="incorrect">❌ You did not pass. Please review the material and try again.</p>`}
+      `;
+    }
+
+    function startTimer(seconds) {
+      const timerDiv = document.getElementById("timer");
+      let remaining = seconds;
+
+      const interval = setInterval(() => {
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        timerDiv.textContent = `Time Remaining: ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        remaining--;
+
+        if (remaining < 0) {
+          clearInterval(interval);
+          document.getElementById("submit").disabled = true;
+          finishQuiz(window.selectedQuestions || []);
+          timerDiv.textContent = "⏰ Time's up!";
+        }
+      }, 1000);
     }
 
     loadQuiz();
