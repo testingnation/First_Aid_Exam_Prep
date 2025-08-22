@@ -44,6 +44,11 @@
 <!-- Welcome Screen -->
 <div id="welcome-screen" style="max-width: 700px; margin: 50px auto; padding: 30px; border: 2px solid #333; border-radius: 10px; background: #f1f1f1;">
   <h1 style="text-align: center; margin-bottom: 20px;">Добредојдовте во Првa Помош Тест</h1>
+
+  <!-- Browser back warning -->
+  <p style="color: red; font-weight: bold; text-align: center; margin-bottom: 20px;">
+    ВНИМАНИЕ: Не користете го копчето „Назад“ на вашиот прелистувач за време на тестот!
+  </p>
   
   <p>Овој сертификат е задолжителен за добивање возачка дозвола во Северна Македонија и Ви овозможува да бидете подготвени за итни ситуации на патот. Тестот е базиран на официјалната банка на прашања на Црвениот Крст на Северна Македонија, осигурувајќи усогласеност со националните стандарди.</p>
   
@@ -65,15 +70,6 @@
   <div style="text-align: center; margin-top: 20px;">
     <button onclick="startTest()" style="padding: 12px 30px; font-size: 18px; font-weight: bold;">Започни го тестот</button>
   </div>
-</div>
-
-<!-- Test Screen -->
-<div id="test-screen" class="hidden">
-  <div id="timer"></div>
-  <div id="progress-container"></div>
-  <div id="question-container"></div>
-  <button id="confirm-btn" onclick="confirmAnswer()">✅ Потврди го одговорот</button>
-  <button id="skip-btn" onclick="skipQuestion()">➡️ Прескокни за сега</button>
 </div>
 
 <!-- Results Screen -->
