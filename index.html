@@ -6,13 +6,34 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 30px; background: #f9f9f9; }
     .hidden { display: none; }
-    .question { font-size: 1.1em; margin-bottom: 20px; text-align: left; }
-    .choices label { display: block; margin: 5px 0; cursor: pointer; text-align: left; }
-    button { cursor: pointer; font-weight: bold; }
 
-    /* Test Screen Layout */
-    #test-screen { max-width: 700px; margin: 50px auto; padding: 30px; border: 2px solid #333; border-radius: 10px; background: #f1f1f1; position: relative; }
-    #timer { font-weight: bold; position: absolute; top: 20px; right: 20px; }
+    /* Screen Containers */
+    .screen-container {
+      max-width: 700px;
+      margin: 50px auto;
+      padding: 30px;
+      border: 2px solid #333;
+      border-radius: 10px;
+      background: #f1f1f1;
+      position: relative;
+    }
+
+    /* Question & Choices */
+    .question { font-size: 1.2em; font-weight: bold; margin-bottom: 15px; color: #003366; }
+    .choices label { display: block; margin: 8px 0; cursor: pointer; color: #000; }
+
+    /* Buttons */
+    .btn-row { margin-top: 40px; text-align: left; }
+    .btn-row button {
+      padding: 10px 20px;
+      font-size: 15px;
+      font-weight: bold;
+      margin-right: 10px;
+      cursor: pointer;
+    }
+
+    /* Timer */
+    #timer { font-weight: bold; position: absolute; top: 20px; right: 20px; color: #555; }
 
     /* Progress Tracker */
     #progress-container {
@@ -31,22 +52,8 @@
       border-radius: 5px;
     }
     .progress-box.answered {
-      background: #2e7d32; /* dark green */
+      background: #2e7d32;
       color: white;
-    }
-
-    /* Button layout for test screen */
-    #test-screen .button-row {
-      display: flex;
-      justify-content: flex-start;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    #test-screen .button-row button {
-      padding: 8px 20px;
-      font-size: 14px;
-      min-width: 160px;
-      text-align: center;
     }
 
     @media print {
@@ -58,7 +65,7 @@
 <body>
 
 <!-- Welcome Screen -->
-<div id="welcome-screen" style="max-width: 700px; margin: 50px auto; padding: 30px; border: 2px solid #333; border-radius: 10px; background: #f1f1f1;">
+<div id="welcome-screen" class="screen-container">
   <h1 style="text-align: center; margin-bottom: 20px;">Добредојдовте во Првa Помош Тест</h1>
   <p style="color: red; font-weight: bold; text-align: center; margin-bottom: 20px;">
     ВНИМАНИЕ: Не користете го копчето „Назад“ на вашиот прелистувач за време на тестот!
@@ -82,12 +89,15 @@
 </div>
 
 <!-- Test Screen -->
-<div id="test-screen" class="hidden">
+<div id="test-screen" class="screen-container hidden">
   <div id="timer"></div>
   <div id="progress-container"></div>
   <div id="question-container"></div>
-  
-  <div class="button-row">
+
+  <!-- Spacer for visual separation -->
+  <div style="height: 20px;"></div>
+
+  <div class="btn-row">
     <button onclick="confirmAnswer()">✅ Потврди го одговорот</button>
     <button onclick="skipQuestion()">➡️ Прескокни за сега</button>
     <button onclick="exitTest()">🟥 Прекинете го тестот</button>
@@ -95,17 +105,22 @@
 </div>
 
 <!-- Results Screen -->
-<div id="results-screen" class="hidden">
-  <h2>Резултати</h2>
-  <p id="score"></p>
+<div id="results-screen" class="screen-container hidden">
+  <h2 style="text-align:center;">Резултати</h2>
+  <p id="score" style="text-align:center; font-weight:bold;"></p>
+  <div style="text-align:center; margin-top: 20px;">
+    <button onclick="location.reload()">Започни повторно</button>
+  </div>
 </div>
 
 <!-- Review Screen -->
-<div id="review-screen" class="hidden">
-  <h2>Преглед на неточни одговори</h2>
+<div id="review-screen" class="screen-container hidden">
+  <h2 style="text-align:center;">Преглед на неточни одговори</h2>
   <div id="review-content"></div>
-  <button onclick="window.print()">🖨️ Печати преглед</button>
-  <button onclick="location.reload()">Започни повторно</button>
+  <div style="text-align:center; margin-top: 20px;">
+    <button onclick="window.print()">🖨️ Печати преглед</button>
+    <button onclick="location.reload()">Започни повторно</button>
+  </div>
 </div>
 
 <script>
@@ -191,12 +206,26 @@ function confirmAnswer() {
 
   userAnswers[currentQuestionIndex] = selected.value;
   if (selected.value === selectedQuestions[currentQuestionIndex].answer) score++;
+
   document.querySelectorAll(".progress-box")[currentQuestionIndex].classList.add("answered");
   unansweredIndices = unansweredIndices.filter(i => i !== currentQuestionIndex);
+
   goToNextQuestion();
 }
 
 function skipQuestion() { goToNextQuestion(true); }
+
+function exitTest() {
+  if (confirm("Дали сте сигурни дека сакате да го прекинете тестот?")) {
+    document.getElementById("test-screen").classList.add("hidden");
+    document.getElementById("welcome-screen").classList.remove("hidden");
+    selectedQuestions = [];
+    unansweredIndices = [];
+    userAnswers = [];
+    score = 0;
+    clearInterval(timerInterval);
+  }
+}
 
 function goToNextQuestion(skipped = false) {
   if (unansweredIndices.length === 0) { finishTest(); return; }
@@ -204,25 +233,14 @@ function goToNextQuestion(skipped = false) {
   let nextIndex;
   if (skipped) {
     const currentPos = unansweredIndices.indexOf(currentQuestionIndex);
-    nextIndex = (currentPos === -1 || currentPos === unansweredIndices.length - 1) ? unansweredIndices[0] : unansweredIndices[currentPos + 1];
+    nextIndex = currentPos === -1 || currentPos === unansweredIndices.length - 1
+      ? unansweredIndices[0]
+      : unansweredIndices[currentPos + 1];
   } else {
     nextIndex = unansweredIndices[0];
   }
-  showQuestion(nextIndex);
-}
 
-function exitTest() {
-  if (confirm("Дали сте сигурни дека сакате да го прекинете тестот? Вашиот напредок ќе се зачува и можете да започнете повторно од почеток.")) {
-    document.getElementById("test-screen").classList.add("hidden");
-    document.getElementById("welcome-screen").classList.remove("hidden");
-    // Reset everything
-    selectedQuestions = [];
-    userAnswers = [];
-    unansweredIndices = [];
-    currentQuestionIndex = 0;
-    score = 0;
-    clearInterval(timerInterval);
-  }
+  showQuestion(nextIndex);
 }
 
 function finishTest() {
