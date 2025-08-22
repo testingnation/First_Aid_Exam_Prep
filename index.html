@@ -2,139 +2,135 @@
 <html lang="mk">
 <head>
   <meta charset="UTF-8">
-  <title>Тест за Прва Помош</title>
+  <title>First Aid Exam Prep</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 30px; line-height: 1.6; }
-    #welcome, #quizContainer, #results { max-width: 800px; margin: auto; }
-    h1, h2, h3 { color: #0078D4; }
-    button {
-      margin-top: 20px;
-      padding: 12px 24px;
-      font-size: 18px;
-      background-color: #0078D4;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    .question { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 6px; }
-    .choices label { display: block; margin: 5px 0; }
-    .correct { color: green; font-weight: bold; }
-    .incorrect { color: red; font-weight: bold; }
-    #timer { font-weight: bold; margin: 20px 0; }
+    body { font-family: Arial, sans-serif; margin: 30px; background: #f9f9f9; }
+    .hidden { display: none; }
+    .question { font-size: 1.2em; margin-bottom: 15px; }
+    .choices label { display: block; margin: 8px 0; cursor: pointer; }
+    button { padding: 10px 20px; margin-top: 15px; }
+    #timer { font-weight: bold; margin-bottom: 20px; }
   </style>
 </head>
 <body>
 
-  <!-- Welcome Page -->
-  <div id="welcome">
-    <h1>Добредојдовте на тестот за Прва Помош</h1>
-    <p>
-      Овој сертификат е задолжителен за добивање возачка дозвола во Северна Македонија и Ви овозможува да бидете подготвени за итни ситуации на патот. 
-      Тестот е базиран на официјалната банка на прашања на Црвениот Крст на Северна Македонија, осигурувајќи усогласеност со националните стандарди.
-    </p>
-    <p>
-      Секое прашање е можност да учите, вежбате и да станете покомпетентни – останете фокусирани и верувајте во себе!
-    </p>
-    <h3>Инструкции за тестот:</h3>
-    <ul>
-      <li>Потребно е 80% за полагање (12 од 15 прашања).</li>
-      <li>Времетраење: 60 минути од моментот кога ќе започнете.</li>
-      <li>Прогрес-бар покажува колку прашања сте одговориле.</li>
-      <li>Кога ќе завршите, кликнете <b>Submit</b> за да се пресмета тестот.</li>
-      <li>Резултатот се прикажува веднаш како Pass/Fail со број на точни одговори (на пример, 14 од 15).</li>
-    </ul>
-    <p><strong>Совет:</strong> Одвојте внимание, останете смирени и верувајте во вашето знаење – секое прашање е шанса да научите и да се подготвите!</p>
-    <button id="startBtn">Започни го тестот</button>
+  <!-- Welcome Screen -->
+  <div id="welcome-screen">
+    <h1>Добредојдовте во Првa Помош Тест</h1>
+    <p>Кликнете подолу за да го започнете тестот.</p>
+    <button onclick="startTest()">Започни го тестот</button>
   </div>
 
-  <!-- Quiz Section -->
-  <div id="quizContainer" style="display:none;">
-    <div id="timer">Преостанато време: 60:00</div>
-    <form id="quizForm"></form>
-    <button type="button" id="submitBtn">Поднеси одговори</button>
+  <!-- Test Screen -->
+  <div id="test-screen" class="hidden">
+    <div id="timer"></div>
+    <div id="question-container"></div>
+    <button id="confirm-btn" onclick="confirmAnswer()">Потврди го одговорот</button>
   </div>
 
-  <!-- Results -->
-  <div id="results"></div>
+  <!-- Results Screen -->
+  <div id="results-screen" class="hidden">
+    <h2>Резултати</h2>
+    <p id="score"></p>
+    <button onclick="location.reload()">Започни повторно</button>
+  </div>
 
-  <script>
-    let questions = [];
-    let timerInterval;
+<script>
+let questions = [];
+let currentQuestionIndex = 0;
+let selectedAnswer = null;
+let score = 0;
+let timerInterval;
 
-    document.getElementById("startBtn").onclick = () => {
-      document.getElementById("welcome").style.display = "none";
-      document.getElementById("quizContainer").style.display = "block";
-      loadQuiz();
-    };
+// Start Test
+async function startTest() {
+  document.getElementById("welcome-screen").classList.add("hidden");
+  document.getElementById("test-screen").classList.remove("hidden");
 
-    async function loadQuiz() {
-      const res = await fetch("first_aid_questions.json");
-      questions = await res.json();
+  try {
+    const response = await fetch("first_aid_questions.json");
+    questions = await response.json();
 
-      // Pick first 15 for now (or randomize if needed)
-      questions = shuffle(questions).slice(0, 15);
+    // Randomize and pick 15
+    questions = questions.sort(() => 0.5 - Math.random()).slice(0, 15);
 
-      renderQuestions();
-      startTimer(60 * 60);
-    }
+    startTimer(15 * 60); // 15 minutes
+    showQuestion();
+  } catch (error) {
+    alert("Грешка при вчитување на прашањата.");
+    console.error(error);
+  }
+}
 
-    function renderQuestions() {
-      const quizForm = document.getElementById("quizForm");
-      quizForm.innerHTML = questions.map((q, i) => `
-        <div class="question">
-          <p><b>Прашање ${i + 1}:</b> ${q.question}</p>
-          <div class="choices">
-            ${q.choices.map(c => `
-              <label>
-                <input type="radio" name="q${i}" value="${c}"> ${c}
-              </label>
-            `).join("")}
-          </div>
-        </div>
-      `).join("");
-    }
+// Show Question
+function showQuestion() {
+  const questionData = questions[currentQuestionIndex];
+  if (!questionData) {
+    return finishTest();
+  }
 
-    function startTimer(seconds) {
-      const timerDiv = document.getElementById("timer");
-      let remaining = seconds;
-      timerInterval = setInterval(() => {
-        const mins = Math.floor(remaining / 60);
-        const secs = remaining % 60;
-        timerDiv.textContent = `Преостанато време: ${mins}:${secs < 10 ? "0" : ""}${secs}`;
-        if (--remaining < 0) {
-          clearInterval(timerInterval);
-          gradeQuiz();
-        }
-      }, 1000);
-    }
+  const container = document.getElementById("question-container");
+  container.innerHTML = `
+    <div class="question">${questionData.Question_Text}</div>
+    <div class="choices">
+      ${Object.keys(questionData)
+        .filter(k => k.startsWith("Choice_"))
+        .map((k, i) => `
+          <label>
+            <input type="radio" name="choice" value="${questionData[k]}">
+            ${questionData[k]}
+          </label>
+        `).join("")}
+    </div>
+  `;
+}
 
-    function gradeQuiz() {
+// Confirm Answer
+function confirmAnswer() {
+  const choices = document.querySelectorAll('input[name="choice"]:checked');
+  if (choices.length === 0) {
+    alert("Ве молиме изберете одговор.");
+    return;
+  }
+
+  selectedAnswer = choices[0].value;
+
+  if (selectedAnswer === questions[currentQuestionIndex].ANSWER) {
+    score++;
+  }
+
+  currentQuestionIndex++;
+  if (currentQuestionIndex < questions.length) {
+    showQuestion();
+  } else {
+    finishTest();
+  }
+}
+
+// Finish Test
+function finishTest() {
+  clearInterval(timerInterval);
+  document.getElementById("test-screen").classList.add("hidden");
+  document.getElementById("results-screen").classList.remove("hidden");
+  document.getElementById("score").textContent = `Вашиот резултат е ${score} од ${questions.length}`;
+}
+
+// Timer
+function startTimer(duration) {
+  let time = duration;
+  const timerDisplay = document.getElementById("timer");
+
+  timerInterval = setInterval(() => {
+    const minutes = Math.floor(time / 60);
+    const seconds = time % 60;
+    timerDisplay.textContent = `Време: ${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+
+    if (--time < 0) {
       clearInterval(timerInterval);
-      const formData = new FormData(document.getElementById("quizForm"));
-      let score = 0;
-
-      questions.forEach((q, i) => {
-        const userAnswer = formData.get("q" + i);
-        if (userAnswer === q.answer) {
-          score++;
-        }
-      });
-
-      const passingScore = 12;
-      const resultsDiv = document.getElementById("results");
-      resultsDiv.innerHTML = `
-        <h2>Резултати</h2>
-        <p><strong>Вашиот резултат: ${score} / ${questions.length}</strong></p>
-        ${score >= passingScore
-          ? `<p class="correct">✅ Честитки! Положивте.</p>`
-          : `<p class="incorrect">❌ Не положивте. Прегледајте го материјалот и обидете се повторно.</p>`}
-      `;
-      document.getElementById("quizContainer").style.display = "none";
+      finishTest();
     }
-
-    document.getElementById("submitBtn").onclick = gradeQuiz;
-
-    // Shuffle helper
-    function shuffle(array) {
-      for (let i = array.length - 1; i > 0; i-
+  }, 1000);
+}
+</script>
+</body>
+</html>
