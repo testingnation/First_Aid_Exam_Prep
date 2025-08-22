@@ -100,8 +100,6 @@ async function startTest() {
 
 function showQuestion() {
   const q = selectedQuestions[currentQuestionIndex];
-  if (!q) return finishTest();
-
   const container = document.getElementById("question-container");
   const shuffledChoices = [...q.choices].sort(() => 0.5 - Math.random());
 
