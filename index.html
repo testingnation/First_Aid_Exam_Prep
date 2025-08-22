@@ -8,7 +8,7 @@
     .hidden { display: none; }
     .question { font-size: 1.2em; margin-bottom: 15px; }
     .choices label { display: block; margin: 8px 0; cursor: pointer; }
-    button { padding: 10px 20px; margin-top: 15px; }
+    button { padding: 10px 20px; margin-top: 15px; font-size: 16px; }
     #timer, #progress { font-weight: bold; margin-bottom: 20px; }
   </style>
 </head>
@@ -17,15 +17,17 @@
   <!-- Welcome Screen -->
   <div id="welcome-screen">
     <h1>Добредојдовте во Првa Помош Тест</h1>
-    <p>Овој сертификат е задолжителен за добивање возачка дозвола во Северна Македонија и Ви овозможува да бидете подготвени за итни ситуации на патот.</p>
-    <p>Тестот е базиран на официјалната банка на прашања на Црвениот Крст на Северна Македонија, осигурувајќи усогласеност со националните стандарди.</p>
-    <p><strong>Инструкции:</strong></p>
+    <p>Овој сертификат е задолжителен за добивање возачка дозвола во Северна Македонија и Ви овозможува да бидете подготвени за итни ситуации на патот. Тестот е базиран на официјалната банка на прашања на Црвениот Крст на Северна Македонија, осигурувајќи усогласеност со националните стандарди.</p>
+    <p>Секое прашање е можност да учите, вежбате и да станете покомпетентни – останете фокусирани и верувајте во себе!</p>
+    <h3>Инструкции за тестот:</h3>
     <ul>
       <li>Потребно е 80% за полагање (12 од 15 прашања).</li>
       <li>Времетраење: 60 минути од моментот кога ќе започнете.</li>
       <li>Прогрес-бар покажува колку прашања сте одговориле.</li>
       <li>Кога ќе завршите, кликнете Submit за да се пресмета тестот.</li>
+      <li>Резултатот се прикажува веднаш како Pass/Fail со број на точни одговори (на пример, 14 од 15).</li>
     </ul>
+    <p><strong>Совет:</strong> Одвојте внимание, останете смирени и верувајте во вашето знаење – секое прашање е шанса да научите и да се подготвите!</p>
     <button onclick="startTest()">Започни го тестот</button>
   </div>
 
@@ -58,7 +60,6 @@ const groupRatios = {
   "WC&": 1, "SC&": 1
 };
 
-// Start Test
 async function startTest() {
   document.getElementById("welcome-screen").classList.add("hidden");
   document.getElementById("test-screen").classList.remove("hidden");
@@ -67,7 +68,6 @@ async function startTest() {
     const response = await fetch("first_aid_questions.json");
     questions = await response.json();
 
-    // Group questions
     const grouped = {};
     for (let q of questions) {
       const group = q.group || "OTHER";
@@ -75,7 +75,6 @@ async function startTest() {
       grouped[group].push(q);
     }
 
-    // Select questions based on ratio
     for (let [group, count] of Object.entries(groupRatios)) {
       if (grouped[group]) {
         const shuffled = grouped[group].sort(() => 0.5 - Math.random());
@@ -93,7 +92,6 @@ async function startTest() {
   }
 }
 
-// Show Question
 function showQuestion() {
   const q = selectedQuestions[currentQuestionIndex];
   if (!q) return finishTest();
@@ -113,7 +111,6 @@ function showQuestion() {
   `;
 }
 
-// Confirm Answer
 function confirmAnswer() {
   const selected = document.querySelector('input[name="choice"]:checked');
   if (!selected) {
@@ -136,7 +133,6 @@ function confirmAnswer() {
   }
 }
 
-// Finish Test
 function finishTest() {
   clearInterval(timerInterval);
   document.getElementById("test-screen").classList.add("hidden");
@@ -150,7 +146,6 @@ function finishTest() {
   document.getElementById("score").textContent = resultText;
 }
 
-// Timer
 function startTimer(duration) {
   let time = duration;
   const timerDisplay = document.getElementById("timer");
