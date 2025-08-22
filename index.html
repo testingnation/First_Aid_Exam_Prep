@@ -46,6 +46,13 @@
     <button onclick="location.reload()">Започни повторно</button>
   </div>
 
+  <!-- Review Screen -->
+<div id="review-screen" class="hidden">
+  <h2>Преглед на неточни одговори</h2>
+  <div id="review-content"></div>
+  <button onclick="location.reload()">Започни повторно</button>
+</div>
+
 <script>
 let questions = [];
 let selectedQuestions = [];
@@ -129,7 +136,45 @@ function confirmAnswer() {
   if (currentQuestionIndex < selectedQuestions.length) {
     showQuestion();
   } else {
-    finishTest();
+    function finishTest() {
+  clearInterval(timerInterval);
+  document.getElementById("test-screen").classList.add("hidden");
+  document.getElementById("results-screen").classList.remove("hidden");
+
+  const passScore = Math.ceil(selectedQuestions.length * 0.8);
+  const resultText = score >= passScore
+    ? `✅ Честитки! Положивте со ${score} од ${selectedQuestions.length} точни одговори.`
+    : `❌ Не положивте. Вашиот резултат е ${score} од ${selectedQuestions.length}. Обидете се повторно.`;
+
+  document.getElementById("score").innerHTML = resultText;
+
+  // Show review screen
+  const reviewDiv = document.getElementById("review-content");
+  const incorrect = selectedQuestions
+    .map((q, i) => {
+      const selected = document.querySelector(`input[name="choice"]:checked`);
+      const userAnswer = selected ? selected.value : "Неодговорено";
+      return {
+        index: i + 1,
+        question: q.question,
+        correct: q.answer,
+        user: userAnswer,
+        isCorrect: userAnswer === q.answer
+      };
+    });
+
+  const incorrectOnly = incorrect.filter(q => !q.isCorrect);
+
+  if (incorrectOnly.length > 0) {
+    document.getElementById("review-screen").classList.remove("hidden");
+    reviewDiv.innerHTML = incorrectOnly.map(q => `
+      <div class="incorrect">
+        <p><b>Прашање ${q.index}:</b> ${q.question}</p>
+        <p>Ваш одговор: <span style="color:red;">${q.user}</span></p>
+        <p>Точен одговор: <span style="color:green;"><b>${q.correct}</b></span></p>
+        <hr>
+      </div>
+    `).join("");
   }
 }
 
