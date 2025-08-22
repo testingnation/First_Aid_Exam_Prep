@@ -66,10 +66,13 @@
       let locked = {};
       let timer;
 
-      document.getElementById("startBtn").onclick = () => {
+      document.getElementById("startBtn").onclick = async () => {
         document.getElementById("welcome").style.display = "none";
         document.getElementById("quizContainer").style.display = "block";
-        loadQuiz();
+        currentIndex = 0;
+        answers = {};
+        locked = {};
+        await loadQuiz();
       };
 
       async function loadQuiz() {
@@ -143,10 +146,7 @@
           return;
         }
 
-        const score = questions.reduce((acc, q, i) => {
-          return answers[i] === q.answer ? acc + 1 : acc;
-        }, 0);
-
+        const score = questions.reduce((acc, q, i) => answers[i] === q.answer ? acc + 1 : acc, 0);
         const passingScore = Math.ceil(questions.length * 0.8);
         const resultsDiv = document.getElementById("results");
         resultsDiv.innerHTML = `
@@ -182,4 +182,17 @@
         timer = setInterval(() => {
           const mins = Math.floor(remaining / 60);
           const secs = remaining % 60;
-          timer
+          timerDiv.textContent = `Преостанато време: ${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+          remaining--;
+          if (remaining < 0) {
+            clearInterval(timer);
+            alert("Времето истече!");
+            confirmSubmission();
+          }
+        }, 1000);
+      }
+    });
+  </script>
+
+</body>
+</html>
