@@ -66,19 +66,37 @@
       let locked = {};
       let timer;
 
-      document.getElementById("startBtn").onclick = async () => {
+      const groupSelection = {
+        "FAB": 2,
+        "S&A": 1,
+        "A&P": 1,
+        "AB&": 2,
+        "B&S": 4,
+        "C&R": 2,
+        "I&S": 1,
+        "C&A": 0,
+        "WC&": 1,
+        "SC&": 1
+      };
+
+      document.getElementById("startBtn").onclick = () => {
         document.getElementById("welcome").style.display = "none";
         document.getElementById("quizContainer").style.display = "block";
-        currentIndex = 0;
-        answers = {};
-        locked = {};
-        await loadQuiz();
+        loadQuiz();
       };
 
       async function loadQuiz() {
         const res = await fetch("first_aid_questions.json");
-        questions = await res.json();
-        questions = shuffle(questions);
+        const allQuestions = await res.json();
+
+        questions = [];
+        for (const [group, count] of Object.entries(groupSelection)) {
+          const groupQuestions = allQuestions.filter(q => q.groupCode === group);
+          const selected = shuffle(groupQuestions).slice(0, count);
+          questions = questions.concat(selected);
+        }
+
+        questions = shuffle(questions); // shuffle final 15
         document.getElementById("progress").textContent = `Одговорени прашања: 0 / ${questions.length}`;
         startTimer(60 * 60);
         renderQuestion(currentIndex);
@@ -156,7 +174,6 @@
             : `<p class="incorrect">❌ Не положивте. Прегледајте ги прашањата и обидете се повторно.</p>`}
           <button id="submitFinal">Прегледај ги прашањата</button>
         `;
-
         document.getElementById("quizContainer").style.display = "none";
         document.getElementById("submitFinal").onclick = showReview;
       }
@@ -180,19 +197,18 @@
         const timerDiv = document.getElementById("timer");
         let remaining = seconds;
         timer = setInterval(() => {
-          const mins = Math.floor(remaining / 60);
-          const secs = remaining % 60;
-          timerDiv.textContent = `Преостанато време: ${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
-          remaining--;
-          if (remaining < 0) {
+          const mins = String(Math.floor(remaining / 60)).padStart(2, "0");
+          const secs = String(remaining % 60).padStart(2, "0");
+          timerDiv.textContent = `Преостанато време: ${mins}:${secs}`;
+          if (remaining <= 0) {
             clearInterval(timer);
             alert("Времето истече!");
             confirmSubmission();
           }
+          remaining--;
         }, 1000);
       }
     });
   </script>
-
 </body>
 </html>
