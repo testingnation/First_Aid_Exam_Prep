@@ -9,9 +9,31 @@
     .question { font-size: 1.2em; margin-bottom: 15px; }
     .choices label { display: block; margin: 8px 0; cursor: pointer; }
     button { padding: 10px 20px; margin-top: 15px; font-size: 16px; cursor: pointer; }
-    #timer, #progress { font-weight: bold; margin-bottom: 20px; }
+    #timer { font-weight: bold; margin-bottom: 20px; }
+    
+    /* Progress Tracker */
+    #progress-container {
+      display: grid;
+      grid-template-columns: repeat(15, 1fr);
+      gap: 5px;
+      margin-bottom: 20px;
+      max-width: 600px;
+    }
+    .progress-box {
+      border: 1px solid #333;
+      padding: 8px;
+      text-align: center;
+      font-weight: bold;
+      background: white;
+      color: black;
+      border-radius: 5px;
+    }
+    .progress-box.answered {
+      background: #2e7d32; /* dark green */
+      color: white;
+    }
     @media print {
-      button { display: none; } /* Hide buttons when printing */
+      button { display: none; }
       body { background: #fff; }
     }
   </style>
@@ -21,24 +43,14 @@
   <!-- Welcome Screen -->
   <div id="welcome-screen">
     <h1>Добредојдовте во Првa Помош Тест</h1>
-    <p>Овој сертификат е задолжителен за добивање возачка дозвола во Северна Македонија и Ви овозможува да бидете подготвени за итни ситуации на патот. Тестот е базиран на официјалната банка на прашања на Црвениот Крст на Северна Македонија, осигурувајќи усогласеност со националните стандарди.</p>
-    <p>Секое прашање е можност да учите, вежбате и да станете покомпетентни – останете фокусирани и верувајте во себе!</p>
-    <h3>Инструкции за тестот:</h3>
-    <ul>
-      <li>Потребно е 80% за полагање (12 од 15 прашања).</li>
-      <li>Времетраење: 60 минути од моментот кога ќе започнете.</li>
-      <li>Прогрес-бар покажува колку прашања сте одговориле.</li>
-      <li>Кога ќе завршите, кликнете Submit за да се пресмета тестот.</li>
-      <li>Резултатот се прикажува веднаш како Pass/Fail со број на точни одговори (на пример, 14 од 15).</li>
-    </ul>
-    <p><strong>Совет:</strong> Одвојте внимание, останете смирени и верувајте во вашето знаење – секое прашање е шанса да научите и да се подготвите!</p>
+    <p>Овој сертификат е задолжителен за добивање возачка дозвола во Северна Македонија...</p>
     <button onclick="startTest()">Започни го тестот</button>
   </div>
 
   <!-- Test Screen -->
   <div id="test-screen" class="hidden">
     <div id="timer"></div>
-    <div id="progress"></div>
+    <div id="progress-container"></div>
     <div id="question-container"></div>
     <button id="confirm-btn" onclick="confirmAnswer()">Потврди го одговорот</button>
   </div>
@@ -94,7 +106,17 @@ async function startTest() {
     }
 
     selectedQuestions = selectedQuestions.sort(() => 0.5 - Math.random());
-    document.getElementById("progress").textContent = `Одговорени прашања: 0 / ${selectedQuestions.length}`;
+
+    // Build progress tracker
+    const progressContainer = document.getElementById("progress-container");
+    progressContainer.innerHTML = "";
+    for (let i = 0; i < selectedQuestions.length; i++) {
+      const box = document.createElement("div");
+      box.classList.add("progress-box");
+      box.textContent = i + 1;
+      progressContainer.appendChild(box);
+    }
+
     startTimer(60 * 60);
     showQuestion();
   } catch (error) {
@@ -133,8 +155,11 @@ function confirmAnswer() {
   const correctAnswer = selectedQuestions[currentQuestionIndex].answer;
   if (userAnswer === correctAnswer) score++;
 
+  // Update progress tracker box
+  const boxes = document.querySelectorAll(".progress-box");
+  boxes[currentQuestionIndex].classList.add("answered");
+
   currentQuestionIndex++;
-  document.getElementById("progress").textContent = `Одговорени прашања: ${currentQuestionIndex} / ${selectedQuestions.length}`;
 
   if (currentQuestionIndex < selectedQuestions.length) {
     showQuestion();
