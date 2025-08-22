@@ -10,7 +10,7 @@
     .choices label { display: block; margin: 8px 0; cursor: pointer; }
     button { padding: 10px 20px; margin-top: 15px; font-size: 16px; }
     #timer { font-weight: bold; margin-bottom: 20px; }
-    #progress-boxes { display: flex; gap: 5px; margin-bottom: 20px; }
+    #progress-boxes { display: flex; gap: 5px; margin-bottom: 20px; flex-wrap: wrap; }
     .box { width: 25px; height: 25px; border: 2px solid #ccc; text-align: center; line-height: 25px; font-weight: bold; background-color: white; }
     .box.filled { background-color: #0078D4; color: white; border-color: #0078D4; }
     .incorrect { background-color: #ffe6e6; padding: 10px; margin-bottom: 10px; border-left: 4px solid red; }
@@ -116,8 +116,10 @@ function renderProgressBoxes(total) {
 
 function updateProgressBox(index) {
   const box = document.getElementById(`box-${index}`);
-  if (box) box.classList.add("filled");
-  box.textContent = "✅";
+  if (box) {
+    box.classList.add("filled");
+    box.textContent = "✅";
+  }
 }
 
 function showQuestion() {
@@ -187,4 +189,6 @@ function finishTest() {
     document.getElementById("review-screen").classList.remove("hidden");
     reviewDiv.innerHTML = incorrectOnly.map(q => `
       <div class="incorrect">
-        <p><b>Прашање ${q.index}:</b> ${q.question}</
+        <p><b>Прашање ${q.index}:</b> ${q.question}</p>
+        <p>Ваш одговор: <span style="color:red;">${q.user || "Неодговорено"}</span></p>
+       
