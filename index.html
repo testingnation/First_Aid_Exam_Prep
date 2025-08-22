@@ -9,11 +9,7 @@
     .question { font-size: 1.2em; margin-bottom: 15px; }
     .choices label { display: block; margin: 8px 0; cursor: pointer; }
     button { padding: 10px 20px; margin-top: 15px; font-size: 16px; }
-    #timer { font-weight: bold; margin-bottom: 20px; }
-    #progress-boxes { display: flex; gap: 5px; margin-bottom: 20px; flex-wrap: wrap; }
-    .box { width: 25px; height: 25px; border: 2px solid #ccc; text-align: center; line-height: 25px; font-weight: bold; background-color: white; }
-    .box.filled { background-color: #0078D4; color: white; border-color: #0078D4; }
-    .incorrect { background-color: #ffe6e6; padding: 10px; margin-bottom: 10px; border-left: 4px solid red; }
+    #timer, #progress { font-weight: bold; margin-bottom: 20px; }
   </style>
 </head>
 <body>
@@ -38,7 +34,7 @@
   <!-- Test Screen -->
   <div id="test-screen" class="hidden">
     <div id="timer"></div>
-    <div id="progress-boxes"></div>
+    <div id="progress"></div>
     <div id="question-container"></div>
     <button id="confirm-btn" onclick="confirmAnswer()">Потврди го одговорот</button>
   </div>
@@ -47,7 +43,6 @@
   <div id="results-screen" class="hidden">
     <h2>Резултати</h2>
     <p id="score"></p>
-    <button onclick="window.print()">🖨️ Печати резултати</button>
   </div>
 
   <!-- Review Screen -->
@@ -94,31 +89,12 @@ async function startTest() {
     }
 
     selectedQuestions = selectedQuestions.sort(() => 0.5 - Math.random());
-    renderProgressBoxes(selectedQuestions.length);
+    document.getElementById("progress").textContent = `Одговорени прашања: 0 / ${selectedQuestions.length}`;
     startTimer(60 * 60);
     showQuestion();
   } catch (error) {
     alert("Грешка при вчитување на прашањата.");
     console.error(error);
-  }
-}
-
-function renderProgressBoxes(total) {
-  const container = document.getElementById("progress-boxes");
-  container.innerHTML = "";
-  for (let i = 0; i < total; i++) {
-    const box = document.createElement("div");
-    box.className = "box";
-    box.id = `box-${i}`;
-    container.appendChild(box);
-  }
-}
-
-function updateProgressBox(index) {
-  const box = document.getElementById(`box-${index}`);
-  if (box) {
-    box.classList.add("filled");
-    box.textContent = "✅";
   }
 }
 
@@ -152,8 +128,8 @@ function confirmAnswer() {
   const correctAnswer = selectedQuestions[currentQuestionIndex].answer;
   if (userAnswer === correctAnswer) score++;
 
-  updateProgressBox(currentQuestionIndex);
   currentQuestionIndex++;
+  document.getElementById("progress").textContent = `Одговорени прашања: ${currentQuestionIndex} / ${selectedQuestions.length}`;
 
   if (currentQuestionIndex < selectedQuestions.length) {
     showQuestion();
@@ -191,4 +167,27 @@ function finishTest() {
       <div class="incorrect">
         <p><b>Прашање ${q.index}:</b> ${q.question}</p>
         <p>Ваш одговор: <span style="color:red;">${q.user || "Неодговорено"}</span></p>
-       
+        <p>Точен одговор: <span style="color:green;"><b>${q.correct}</b></span></p>
+        <hr>
+      </div>
+    `).join("");
+  }
+}
+
+function startTimer(duration) {
+  let time = duration;
+  const timerDisplay = document.getElementById("timer");
+
+  timerInterval = setInterval(() => {
+    const minutes = Math.floor(time / 60);
+    const seconds = time % 60;
+    timerDisplay.textContent = `Преостанато време: ${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+    if (--time < 0) {
+      clearInterval(timerInterval);
+      finishTest();
+    }
+  }, 1000);
+}
+</script>
+</body>
+</html>
