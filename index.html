@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>First Aid Exam Prep</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 30px; }
+    .question { margin-bottom: 20px; }
+    .choices label { display: block; margin: 5px 0; }
+    .result { font-weight: bold; margin-top: 20px; }
+    .correct { color: green; }
+    .incorrect { color: red; }
+  </style>
+</head>
+<body>
+  <h1>First Aid Exam Practice</h1>
+  <div id="quiz"></div>
+  <button id="submit">Submit Test</button>
+  <div id="results"></div>
+
+  <script>
+    const ratios = {
+      "FAB": 2, "S&A": 1, "A&P": 1, "AB&": 2, "B&S": 4,
+      "C&R": 2, "I&S": 1, "C&A": 0, "WC&": 1, "SC&": 1
+    };
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    async function loadQuiz() {
+      const res = await fetch("first_aid_questions.json");
+      const questions = await res.json();
+
+      const grouped = {};
+      for (let q of questions) {
+        const group = q.group || "OTHER";
+        if (!grouped[group]) grouped[group] = [];
+        grouped[group].push(q);
+      }
+
+      let selected = [];
+      for (let [group, count] of Object.entries(ratios)) {
+        if (grouped[group]) {
+          selected.push(...shuffle(grouped[group]).slice(0, count));
+        }
+      }
+
+      selected = shuffle(selected);
+      const quizDiv = document.getElementById("quiz");
+      quizDiv.innerHTML = selected.map((q, i) => `
+        <div class="question">
+          <p><b>Q${i + 1}:</b> ${q.question}</p>
+          <div class="choices">
+            ${q.choices.map(c => `
+              <label>
+                <input type="radio" name="q${i}" value="${c}"> ${c}
+              </label>
+            `).join("")}
+          </div>
+        </div>
+      `).join("");
+
+      document.getElementById("submit").onclick = () => {
+        let score = 0;
+        const resultsDiv = document.getElementById("results");
+        resultsDiv.innerHTML = "";
+
+        selected.forEach((q, i) => {
+          const chosen = document.querySelector(`input[name="q${i}"]:checked`);
+          if (chosen && chosen.value === q.answer) {
+            score++;
+          } else {
+            resultsDiv.innerHTML += `<p class="incorrect">❌ Q${i + 1} Wrong. Correct answer: <b>${q.answer}</b></p>`;
+          }
+        });
+
+        const total = selected.length;
+        const passingScore = Math.ceil(total * 0.8);
+
+        resultsDiv.innerHTML = `
+          <p class="result">Your score: ${score} / ${total}</p>
+          ${score >= passingScore
+            ? `<p class="correct">✅ Congratulations! You passed.</p>`
+            : `<p class="incorrect">❌ You did not pass. Please review the material and try again.</p>`}
+        `;
+      };
+    }
+
+    loadQuiz();
+  </script>
+</body>
+</html>
