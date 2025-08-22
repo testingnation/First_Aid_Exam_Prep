@@ -10,7 +10,7 @@
     .choices label { display: block; margin: 8px 0; cursor: pointer; }
     button { padding: 10px 20px; margin-top: 15px; font-size: 16px; cursor: pointer; }
     #timer { font-weight: bold; margin-bottom: 20px; }
-    
+
     /* Progress Tracker */
     #progress-container {
       display: grid;
@@ -32,6 +32,7 @@
       background: #2e7d32; /* dark green */
       color: white;
     }
+
     @media print {
       button { display: none; }
       body { background: #fff; }
@@ -57,28 +58,28 @@
   <button onclick="startTest()">Започни го тестот</button>
 </div>
 
+<!-- Test Screen -->
+<div id="test-screen" class="hidden">
+  <div id="timer"></div>
+  <div id="progress-container"></div>
+  <div id="question-container"></div>
+  <button id="confirm-btn" onclick="confirmAnswer()">Потврди го одговорот</button>
+  <button id="skip-btn" onclick="skipQuestion()">➡️ Прескокни за сега</button>
+</div>
 
-  <!-- Test Screen -->
-  <div id="test-screen" class="hidden">
-    <div id="timer"></div>
-    <div id="progress-container"></div>
-    <div id="question-container"></div>
-    <button id="confirm-btn" onclick="confirmAnswer()">Потврди го одговорот</button>
-  </div>
+<!-- Results Screen -->
+<div id="results-screen" class="hidden">
+  <h2>Резултати</h2>
+  <p id="score"></p>
+</div>
 
-  <!-- Results Screen -->
-  <div id="results-screen" class="hidden">
-    <h2>Резултати</h2>
-    <p id="score"></p>
-  </div>
-
-  <!-- Review Screen -->
-  <div id="review-screen" class="hidden">
-    <h2>Преглед на неточни одговори</h2>
-    <div id="review-content"></div>
-    <button onclick="window.print()">🖨️ Печати преглед</button>
-    <button onclick="location.reload()">Започни повторно</button>
-  </div>
+<!-- Review Screen -->
+<div id="review-screen" class="hidden">
+  <h2>Преглед на неточни одговори</h2>
+  <div id="review-content"></div>
+  <button onclick="window.print()">🖨️ Печати преглед</button>
+  <button onclick="location.reload()">Започни повторно</button>
+</div>
 
 <script>
 let questions = [];
@@ -86,6 +87,7 @@ let selectedQuestions = [];
 let currentQuestionIndex = 0;
 let score = 0;
 let userAnswers = [];
+let unansweredIndices = [];
 let timerInterval;
 
 const groupRatios = {
@@ -128,16 +130,21 @@ async function startTest() {
       progressContainer.appendChild(box);
     }
 
+    // Initialize unanswered indices
+    unansweredIndices = selectedQuestions.map((_, i) => i);
+    userAnswers = new Array(selectedQuestions.length);
+
     startTimer(60 * 60);
-    showQuestion();
+    showQuestion(unansweredIndices[0]);
   } catch (error) {
     alert("Грешка при вчитување на прашањата.");
     console.error(error);
   }
 }
 
-function showQuestion() {
-  const q = selectedQuestions[currentQuestionIndex];
+function showQuestion(index) {
+  currentQuestionIndex = index;
+  const q = selectedQuestions[index];
   const container = document.getElementById("question-container");
   const shuffledChoices = [...q.choices].sort(() => 0.5 - Math.random());
 
@@ -146,7 +153,7 @@ function showQuestion() {
     <div class="choices">
       ${shuffledChoices.map(choice => `
         <label>
-          <input type="radio" name="choice" value="${choice}"> ${choice}
+          <input type="radio" name="choice" value="${choice}" ${userAnswers[index] === choice ? "checked" : ""}> ${choice}
         </label>
       `).join("")}
     </div>
@@ -160,23 +167,41 @@ function confirmAnswer() {
     return;
   }
 
-  const userAnswer = selected.value;
-  userAnswers.push(userAnswer);
+  userAnswers[currentQuestionIndex] = selected.value;
+  if (selected.value === selectedQuestions[currentQuestionIndex].answer) score++;
 
-  const correctAnswer = selectedQuestions[currentQuestionIndex].answer;
-  if (userAnswer === correctAnswer) score++;
+  // Mark question as answered
+  document.querySelectorAll(".progress-box")[currentQuestionIndex].classList.add("answered");
 
-  // Update progress tracker box
-  const boxes = document.querySelectorAll(".progress-box");
-  boxes[currentQuestionIndex].classList.add("answered");
+  // Remove from unansweredIndices
+  unansweredIndices = unansweredIndices.filter(i => i !== currentQuestionIndex);
 
-  currentQuestionIndex++;
+  goToNextQuestion();
+}
 
-  if (currentQuestionIndex < selectedQuestions.length) {
-    showQuestion();
-  } else {
+function skipQuestion() {
+  goToNextQuestion(true);
+}
+
+function goToNextQuestion(skipped = false) {
+  if (unansweredIndices.length === 0) {
     finishTest();
+    return;
   }
+
+  let nextIndex;
+  if (skipped) {
+    const currentPos = unansweredIndices.indexOf(currentQuestionIndex);
+    if (currentPos === -1 || currentPos === unansweredIndices.length - 1) {
+      nextIndex = unansweredIndices[0];
+    } else {
+      nextIndex = unansweredIndices[currentPos + 1];
+    }
+  } else {
+    nextIndex = unansweredIndices[0];
+  }
+
+  showQuestion(nextIndex);
 }
 
 function finishTest() {
@@ -192,15 +217,13 @@ function finishTest() {
   document.getElementById("score").innerHTML = resultText;
 
   const reviewDiv = document.getElementById("review-content");
-  const incorrectOnly = selectedQuestions.map((q, i) => {
-    return {
-      index: i + 1,
-      question: q.question,
-      correct: q.answer,
-      user: userAnswers[i],
-      isCorrect: userAnswers[i] === q.answer
-    };
-  }).filter(q => !q.isCorrect);
+  const incorrectOnly = selectedQuestions.map((q, i) => ({
+    index: i + 1,
+    question: q.question,
+    correct: q.answer,
+    user: userAnswers[i],
+    isCorrect: userAnswers[i] === q.answer
+  })).filter(q => !q.isCorrect);
 
   if (incorrectOnly.length > 0) {
     document.getElementById("review-screen").classList.remove("hidden");
@@ -230,5 +253,6 @@ function startTimer(duration) {
   }, 1000);
 }
 </script>
+
 </body>
 </html>
