@@ -1,1 +1,2 @@
 # First_Aid_Exam_Prep
+The First Aid Certificate is a mandatory prerequisite for obtaining a Driver's License in North Macedonia. This certification ensures that candidates are adequately prepared to handle emergency situations on the road by providing comprehensive training and practice. The examination content is derived from the official question bank of the North Macedonian Red Cross, ensuring alignment with national standards and requirements.
