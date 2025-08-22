@@ -9,7 +9,7 @@
     .question { font-size: 1.2em; margin-bottom: 15px; }
     .choices label { display: block; margin: 8px 0; cursor: pointer; }
     button { padding: 10px 20px; margin-top: 15px; }
-    #timer { font-weight: bold; margin-bottom: 20px; }
+    #timer, #progress { font-weight: bold; margin-bottom: 20px; }
   </style>
 </head>
 <body>
@@ -17,13 +17,22 @@
   <!-- Welcome Screen -->
   <div id="welcome-screen">
     <h1>Добредојдовте во Првa Помош Тест</h1>
-    <p>Кликнете подолу за да го започнете тестот.</p>
+    <p>Овој сертификат е задолжителен за добивање возачка дозвола во Северна Македонија и Ви овозможува да бидете подготвени за итни ситуации на патот.</p>
+    <p>Тестот е базиран на официјалната банка на прашања на Црвениот Крст на Северна Македонија, осигурувајќи усогласеност со националните стандарди.</p>
+    <p><strong>Инструкции:</strong></p>
+    <ul>
+      <li>Потребно е 80% за полагање (12 од 15 прашања).</li>
+      <li>Времетраење: 60 минути од моментот кога ќе започнете.</li>
+      <li>Прогрес-бар покажува колку прашања сте одговориле.</li>
+      <li>Кога ќе завршите, кликнете Submit за да се пресмета тестот.</li>
+    </ul>
     <button onclick="startTest()">Започни го тестот</button>
   </div>
 
   <!-- Test Screen -->
   <div id="test-screen" class="hidden">
     <div id="timer"></div>
+    <div id="progress"></div>
     <div id="question-container"></div>
     <button id="confirm-btn" onclick="confirmAnswer()">Потврди го одговорот</button>
   </div>
@@ -37,10 +46,17 @@
 
 <script>
 let questions = [];
+let selectedQuestions = [];
 let currentQuestionIndex = 0;
-let selectedAnswer = null;
 let score = 0;
 let timerInterval;
+
+// Group ratios
+const groupRatios = {
+  "FAB": 2, "S&A": 1, "A&P": 1, "AB&": 2,
+  "B&S": 4, "C&R": 2, "I&S": 1, "C&A": 0,
+  "WC&": 1, "SC&": 1
+};
 
 // Start Test
 async function startTest() {
@@ -51,10 +67,25 @@ async function startTest() {
     const response = await fetch("first_aid_questions.json");
     questions = await response.json();
 
-    // Randomize and pick 15
-    questions = questions.sort(() => 0.5 - Math.random()).slice(0, 15);
+    // Group questions
+    const grouped = {};
+    for (let q of questions) {
+      const group = q.group || "OTHER";
+      if (!grouped[group]) grouped[group] = [];
+      grouped[group].push(q);
+    }
 
-    startTimer(15 * 60); // 15 minutes
+    // Select questions based on ratio
+    for (let [group, count] of Object.entries(groupRatios)) {
+      if (grouped[group]) {
+        const shuffled = grouped[group].sort(() => 0.5 - Math.random());
+        selectedQuestions.push(...shuffled.slice(0, count));
+      }
+    }
+
+    selectedQuestions = selectedQuestions.sort(() => 0.5 - Math.random());
+    document.getElementById("progress").textContent = `Одговорени прашања: 0 / ${selectedQuestions.length}`;
+    startTimer(60 * 60); // 60 minutes
     showQuestion();
   } catch (error) {
     alert("Грешка при вчитување на прашањата.");
@@ -64,43 +95,41 @@ async function startTest() {
 
 // Show Question
 function showQuestion() {
-  const questionData = questions[currentQuestionIndex];
-  if (!questionData) {
-    return finishTest();
-  }
+  const q = selectedQuestions[currentQuestionIndex];
+  if (!q) return finishTest();
 
   const container = document.getElementById("question-container");
+  const shuffledChoices = [...q.choices].sort(() => 0.5 - Math.random());
+
   container.innerHTML = `
-    <div class="question">${questionData.Question_Text}</div>
+    <div class="question">${q.question}</div>
     <div class="choices">
-      ${Object.keys(questionData)
-        .filter(k => k.startsWith("Choice_"))
-        .map((k, i) => `
-          <label>
-            <input type="radio" name="choice" value="${questionData[k]}">
-            ${questionData[k]}
-          </label>
-        `).join("")}
+      ${shuffledChoices.map(choice => `
+        <label>
+          <input type="radio" name="choice" value="${choice}"> ${choice}
+        </label>
+      `).join("")}
     </div>
   `;
 }
 
 // Confirm Answer
 function confirmAnswer() {
-  const choices = document.querySelectorAll('input[name="choice"]:checked');
-  if (choices.length === 0) {
+  const selected = document.querySelector('input[name="choice"]:checked');
+  if (!selected) {
     alert("Ве молиме изберете одговор.");
     return;
   }
 
-  selectedAnswer = choices[0].value;
+  const userAnswer = selected.value;
+  const correctAnswer = selectedQuestions[currentQuestionIndex].answer;
 
-  if (selectedAnswer === questions[currentQuestionIndex].ANSWER) {
-    score++;
-  }
+  if (userAnswer === correctAnswer) score++;
 
   currentQuestionIndex++;
-  if (currentQuestionIndex < questions.length) {
+  document.getElementById("progress").textContent = `Одговорени прашања: ${currentQuestionIndex} / ${selectedQuestions.length}`;
+
+  if (currentQuestionIndex < selectedQuestions.length) {
     showQuestion();
   } else {
     finishTest();
@@ -112,7 +141,13 @@ function finishTest() {
   clearInterval(timerInterval);
   document.getElementById("test-screen").classList.add("hidden");
   document.getElementById("results-screen").classList.remove("hidden");
-  document.getElementById("score").textContent = `Вашиот резултат е ${score} од ${questions.length}`;
+
+  const passScore = Math.ceil(selectedQuestions.length * 0.8);
+  const resultText = score >= passScore
+    ? `✅ Честитки! Положивте со ${score} од ${selectedQuestions.length} точни одговори.`
+    : `❌ Не положивте. Вашиот резултат е ${score} од ${selectedQuestions.length}. Обидете се повторно.`;
+
+  document.getElementById("score").textContent = resultText;
 }
 
 // Timer
@@ -123,8 +158,7 @@ function startTimer(duration) {
   timerInterval = setInterval(() => {
     const minutes = Math.floor(time / 60);
     const seconds = time % 60;
-    timerDisplay.textContent = `Време: ${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
-
+    timerDisplay.textContent = `Преостанато време: ${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
     if (--time < 0) {
       clearInterval(timerInterval);
       finishTest();
