@@ -2,61 +2,53 @@
 <html lang="mk">
 <head>
   <meta charset="UTF-8">
-  <title>Тест за Прва Помош</title>
+  <title>First Aid Exam Prep</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    .hidden { display: none; }
-    .question { margin-bottom: 20px; }
+    body { font-family: Arial, sans-serif; margin: 30px; }
+    #welcome, #quiz, #results { display: none; }
+    .question { margin-bottom: 20px; font-weight: bold; }
     .choices label { display: block; margin: 5px 0; }
-    #timer { font-weight: bold; margin-bottom: 15px; }
-    #progress { margin-bottom: 15px; }
-    button { padding: 10px 20px; margin-top: 10px; cursor: pointer; }
+    .hidden { display: none; }
+    #progressBar { margin-top: 15px; }
   </style>
 </head>
 <body>
 
-  <!-- Welcome Screen -->
-  <div id="welcome-screen">
-    <h2>Добредојдовте на тестот за Прва Помош!</h2>
-    <p>Овој сертификат е задолжителен за добивање возачка дозвола во Северна Македонија и Ви помага да бидете подготвени за итни ситуации на патот.</p>
-    <p><strong>Инструкции:</strong></p>
-    <ul>
-      <li>Потребно е <strong>80%</strong> за положување (12 од 15 прашања)</li>
-      <li>Времетраење: <strong>60 минути</strong></li>
-      <li>Прогрес-бар ќе покаже колку прашања сте одговориле</li>
-      <li>По завршување, кликнете <strong>Submit</strong> за резултат</li>
-    </ul>
-    <button onclick="startTest()">Започни го тестот</button>
+  <!-- Welcome screen -->
+  <div id="welcome">
+    <h2>Добредојдовте во тестот за прва помош</h2>
+    <p>За да го положите тестот, потребни се најмалку 80% (12 точни од 15).</p>
+    <p>Времетраење: 60 минути.</p>
+    <p>Ќе имате прашања од различни категории.</p>
+    <button id="startBtn">Започни го тестот</button>
   </div>
 
-  <!-- Quiz Screen -->
-  <div id="quiz-screen" class="hidden">
+  <!-- Quiz screen -->
+  <div id="quiz">
     <div id="timer"></div>
     <div id="progress"></div>
-    <div id="question-container"></div>
-    <button id="confirm-btn" onclick="confirmAnswer()">Потврди одговор</button>
-    <button id="submit-btn" class="hidden" onclick="submitQuiz()">Submit</button>
+    <div id="progressBar"></div>
+    <div class="question" id="question"></div>
+    <div class="choices" id="choices"></div>
+    <button id="submitBtn">Потврди одговор</button>
   </div>
 
-  <!-- Results Screen -->
-  <div id="result-screen" class="hidden">
-    <h2>Резултат</h2>
-    <p id="result-text"></p>
-    <button onclick="location.reload()">Обиди се повторно</button>
+  <!-- Results screen -->
+  <div id="results">
+    <h2>Резултати</h2>
+    <p id="scoreText"></p>
+    <button onclick="location.reload()">Започни повторно</button>
   </div>
 
-<script>
-  let questions = [];
-  let currentIndex = 0;
-  let score = 0;
-  let timerInterval;
+  <script>
+    let allQuestions = [];
+    let selectedQuestions = [];
+    let currentIndex = 0;
+    let score = 0;
+    let timerInterval;
 
-  async function loadQuiz() {
-    const res = await fetch("first_aid_questions.json");
-    const allQuestions = await res.json();
-
-    // How many questions from each group
-    const groupSelection = {
+    // Group distribution
+    const groupDistribution = {
       "FAB": 2,
       "S&A": 1,
       "A&P": 1,
@@ -64,122 +56,111 @@
       "B&S": 4,
       "C&R": 2,
       "I&S": 1,
-      "C&A": 0,
       "WC&": 1,
       "SC&": 1
     };
 
-    questions = [];
-
-    for (const [group, count] of Object.entries(groupSelection)) {
-      const groupQuestions = allQuestions.filter(q => q.groupCode === group);
-      const selected = shuffle(groupQuestions).slice(0, count);
-      questions = questions.concat(selected);
+    // Load questions from JSON
+    async function loadQuestions() {
+      const res = await fetch("first_aid_questions.json");
+      allQuestions = await res.json();
+      document.getElementById("welcome").style.display = "block";
     }
 
-    questions = shuffle(questions); // shuffle the final 15
-  }
-
-  function startTest() {
-    document.getElementById("welcome-screen").style.display = "none";
-    document.getElementById("quiz-screen").style.display = "block";
-
-    loadQuiz().then(() => {
-      currentIndex = 0;
-      score = 0;
-      document.getElementById("progress").textContent = `Одговорени прашања: 0 / ${questions.length}`;
-      startTimer(60 * 60);
-      renderQuestion(currentIndex);
-    });
-  }
-
-  function renderQuestion(index) {
-    const question = questions[index];
-    if (!question) return;
-
-    const container = document.getElementById("question-container");
-    container.innerHTML = `
-      <div class="question">
-        <p><strong>Прашање ${index + 1} од ${questions.length}:</strong></p>
-        <p>${question.questionText}</p>
-        <div class="choices">
-          ${question.choices.map((choice, i) => `
-            <label>
-              <input type="radio" name="choice" value="${i}">
-              ${choice}
-            </label>
-          `).join("")}
-        </div>
-      </div>
-    `;
-
-    document.getElementById("confirm-btn").style.display = "inline-block";
-  }
-
-  function confirmAnswer() {
-    const selected = document.querySelector('input[name="choice"]:checked');
-    if (!selected) {
-      alert("Изберете одговор!");
-      return;
+    // Pick questions based on distribution
+    function pickQuestions() {
+      selectedQuestions = [];
+      for (const group in groupDistribution) {
+        let groupQs = allQuestions.filter(q => q.GROUP_CODE === group);
+        shuffle(groupQs);
+        selectedQuestions.push(...groupQs.slice(0, groupDistribution[group]));
+      }
+      shuffle(selectedQuestions);
     }
 
-    if (parseInt(selected.value) === questions[currentIndex].answer) {
-      score++;
-    }
-
-    currentIndex++;
-
-    if (currentIndex < questions.length) {
-      document.getElementById("progress").textContent = `Одговорени прашања: ${currentIndex} / ${questions.length}`;
-      renderQuestion(currentIndex);
-    } else {
-      document.getElementById("confirm-btn").style.display = "none";
-      document.getElementById("submit-btn").style.display = "inline-block";
-    }
-  }
-
-  function submitQuiz() {
-    clearInterval(timerInterval);
-
-    document.getElementById("quiz-screen").style.display = "none";
-    document.getElementById("result-screen").style.display = "block";
-
-    const passMark = Math.ceil(questions.length * 0.8);
-    const resultText = score >= passMark ? 
-      `Честитки! Положивте. (${score} од ${questions.length})` : 
-      `Жалам, не положивте. (${score} од ${questions.length})`;
-
-    document.getElementById("result-text").textContent = resultText;
-  }
-
-  function startTimer(duration) {
-    let remaining = duration;
-    const timerDisplay = document.getElementById("timer");
-
-    function updateTimer() {
-      const minutes = Math.floor(remaining / 60);
-      const seconds = remaining % 60;
-      timerDisplay.textContent = `Преостанато време: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-      if (--remaining < 0) {
-        clearInterval(timerInterval);
-        submitQuiz();
+    // Shuffle array helper
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
       }
     }
 
-    updateTimer();
-    timerInterval = setInterval(updateTimer, 1000);
-  }
-
-  function shuffle(array) {
-    let currentIndex = array.length, randomIndex;
-    while (currentIndex != 0) {
-      randomIndex = Math.floor(Math.random() * currentIndex);
-      currentIndex--;
-      [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+    // Start quiz
+    function startQuiz() {
+      document.getElementById("welcome").style.display = "none";
+      document.getElementById("quiz").style.display = "block";
+      pickQuestions();
+      startTimer(60 * 60);
+      showQuestion();
     }
-    return array;
-  }
-</script>
+
+    // Show a question
+    function showQuestion() {
+      let q = selectedQuestions[currentIndex];
+      document.getElementById("question").textContent = q.Question_Text;
+      let choicesDiv = document.getElementById("choices");
+      choicesDiv.innerHTML = "";
+      for (let i = 1; i <= 5; i++) {
+        if (q["Choice_" + i]) {
+          let choiceHTML = `
+            <label>
+              <input type="radio" name="choice" value="${i}"> ${q["Choice_" + i]}
+            </label>
+          `;
+          choicesDiv.innerHTML += choiceHTML;
+        }
+      }
+      document.getElementById("progress").textContent =
+        "Одговорени прашања: " + currentIndex + " / " + selectedQuestions.length;
+    }
+
+    // Confirm answer
+    function submitAnswer() {
+      let selected = document.querySelector("input[name='choice']:checked");
+      if (!selected) return alert("Изберете одговор!");
+      let answer = selected.value;
+      if (answer == selectedQuestions[currentIndex].ANSWER) {
+        score++;
+      }
+      currentIndex++;
+      if (currentIndex < selectedQuestions.length) {
+        showQuestion();
+      } else {
+        endQuiz();
+      }
+    }
+
+    // End quiz
+    function endQuiz() {
+      clearInterval(timerInterval);
+      document.getElementById("quiz").style.display = "none";
+      document.getElementById("results").style.display = "block";
+      let pass = score >= 12 ? "ПОЛОЖЕНО ✅" : "НЕ ПОЛОЖЕНО ❌";
+      document.getElementById("scoreText").textContent =
+        pass + " — " + score + " точни од " + selectedQuestions.length;
+    }
+
+    // Timer
+    function startTimer(duration) {
+      let remaining = duration;
+      timerInterval = setInterval(() => {
+        let minutes = Math.floor(remaining / 60);
+        let seconds = remaining % 60;
+        document.getElementById("timer").textContent =
+          "Преостанато време: " + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+        if (--remaining < 0) {
+          clearInterval(timerInterval);
+          endQuiz();
+        }
+      }, 1000);
+    }
+
+    document.getElementById("startBtn").addEventListener("click", startQuiz);
+    document.getElementById("submitBtn").addEventListener("click", submitAnswer);
+
+    loadQuestions();
+  </script>
 
 </body>
 </html>
